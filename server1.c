@@ -12,7 +12,6 @@
 #include <signal.h>
 #include<netinet/tcp.h>
 #include<netinet/ip.h>
-
 #define BACKLOG 10
 #define MAXLEN 65536
 
@@ -58,11 +57,19 @@ int main(int argc, char const* argv[]) {
 		//if(bind(server_sock, rec->ai_addr, rec->ai_addrlen) == 0) break;
 		//printf("Not supposed to get here\n");
 		//close(server_sock);
-	}
+        if (connect(server_sock, rec->ai_addr, rec->ai_addrlen) != -1)
+            break;
+    }
+
+    if(server_sock == -1){
+        printf("Socket Failed");
+    } else {
+        printf("Socket Created");
+    }
 
     while(1) {
         data_size = recvfrom(server_sock, buffer, MAXLEN, 0, &address, &addrlen);
-
+        printf("Attempted Connection");
         if (data_size < 0) {
             perror("Failed to get packets");
             exit(EXIT_FAILURE);
@@ -82,12 +89,13 @@ int main(int argc, char const* argv[]) {
 
         if ((unsigned int) tcph->syn) {
             deny_connection(server_sock, *inet_ntoa(source.sin_addr), ntohs(tcph->source));
+            printf("TCP Connection Blocked!");
+            break;
         }
     }
 
 	close(server_sock);
 	shutdown(server_sock, SHUT_RDWR);
-
 	return 0;
 }
 
