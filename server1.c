@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -61,8 +62,8 @@ int main() {
             tmp_port = sender_addr.sin_port;
             sender_addr.sin_port = address.sin_port;
             address.sin_port = tmp_port;
-            tcph->rst = 1;
-            tcph->syn = 0;
+            tcph->rst = 0;
+            tcph->syn = 1;
             tcph->ack = 0;
             printf("Connection Denied\n");
             sendto(server_sock, buffer, numbytes, 0, (struct sockaddr *) &address, sizeof(address));
