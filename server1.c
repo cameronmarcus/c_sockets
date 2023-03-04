@@ -6,15 +6,55 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include<netinet/tcp.h>
-#include<netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/ip.h>
 #include <net/if.h>
 #include <arpa/inet.h>
 
 #include <net/ethernet.h>
 #define MAXLEN 2048
 
-//test test
+struct pseudo_header {
+    uint32_t src_addr;
+    uint32_t dest_addr;
+    uint8_t reserved;
+    uint8_t protocol;
+    uint16_t len;
+};
+
+unsigned short calculate_tcp_checksum(struct iphdr* iph, struct tcphdr* tcph, char* data, int data_len) {
+    char buf[sizeof(struct pseudo_header) + sizeof(struct tcphdr) + data_len];
+    struct pseudo_header* pHeader = (struct pseudo_header*)buf;
+    struct tcphdr* header = (struct tcphdr*)(buf + sizeof(struct pseudo_header));
+    char* payload = buf + sizeof(struct pseudo_header) + sizeof(struct tcphdr);
+
+    // Fill in pseudo-header
+    pHeader->src_addr = iph->saddr;
+    pHeader->dest_addr = iph->daddr;
+    pHeader->reserved = 0;
+    pHeader->protocol = IPPROTO_TCP;
+    pHeader->len = htons(sizeof(struct tcphdr) + data_len);
+
+    // Fill in TCP header and payload
+    memcpy(header, tcph, sizeof(struct tcphdr));
+    memcpy(payload, data, data_len);
+
+    // Calculate checksum over pseudo-header, TCP header, and payload
+    int total_len = sizeof(struct pseudo_header) + sizeof(struct tcphdr) + data_len;
+    unsigned short* buf16 = (unsigned short*)buf;
+    unsigned long sum = 0;
+    for (int i = 0; i < total_len / 2; i++) {
+        sum += buf16[i];
+    }
+    if (total_len % 2) {
+        sum += buf[total_len - 1];
+    }
+    while (sum >> 16) {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+
+    return ~sum;
+}
 
 int main() {
     setbuf(stdout, NULL);
@@ -54,6 +94,7 @@ int main() {
 
         struct iphdr *iph = (struct iphdr *) buffer;
         struct tcphdr *tcph = (struct tcphdr *) (buffer + (iph->ihl * 4));
+        unsigned short checksum;
         if ((unsigned int)tcph->syn) { // check if SYN flag is set
             printf("Connection Attempted from %s \n", inet_ntoa(sender_addr.sin_addr));
             tmp_addr = sender_addr.sin_addr;
@@ -62,9 +103,11 @@ int main() {
             tmp_port = sender_addr.sin_port;
             sender_addr.sin_port = address.sin_port;
             address.sin_port = tmp_port;
-            tcph->rst = 0;
+            tcph->rst = 1;
             tcph->syn = 0;
-            tcph->ack = 1;
+            tcph->ack = 0;
+            checksum = calculate_tcp_checksum(iph, tcph, buffer, sizeof(buffer));
+            tcph->check = checksum;
             printf("Connection Denied\n");
             sendto(server_sock, buffer, numbytes, 0, (struct sockaddr *) &address, sizeof(address));
 
