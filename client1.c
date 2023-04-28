@@ -10,7 +10,7 @@
 #define MAXLEN 100
 
 int main(int argc, char const* argv[]) {
-	const char *host = "192.168.0.194";
+	const char *host = "192.168.0.184";
 	const char *port = "3490";	
 	int client_sock;
 	int in;
