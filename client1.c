@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#define MAXLEN 100
+#define MAXLEN 1024
 
 int main(int argc, char const* argv[]) {
 	const char *host = "192.168.0.184";
@@ -43,13 +43,33 @@ int main(int argc, char const* argv[]) {
 
 	freeaddrinfo(res);
 
-	if(recv(client_sock, buffer, MAXLEN-1, 0) == -1) {
-		perror("Failed to accept client socket.");
-		exit(EXIT_FAILURE);
-	}
-	
-	printf("Received: '%s'", buffer);
-	
+    char message[1000];
+    while(1) {
+        if (recv(client_sock, buffer, MAXLEN - 1, 0) == -1) {
+            perror("Failed to accept client socket.");
+            exit(EXIT_FAILURE);
+        }
+
+        printf(buffer);
+
+
+        printf("Enter Selection: ");
+        fgets(message, 1000, stdin);
+
+        // remove newline character from user input
+
+        // send the message to the server
+        if (send(client_sock, message, strlen(message), 0) < 0) {
+            printf("Send failed\n");
+            return 1;
+        }
+
+        while (recv(client_sock, buffer, 1000, 0) > 0) {
+            printf("Received message from client: %s\n", buffer);
+            memset(buffer, 0, 1000);
+        }
+    }
+
 	close(client_sock);
 
 	return 0;

@@ -8,8 +8,15 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#define MAXLEN 100
+#define MAXLEN 1024
 #define BACKLOG 5
+
+#include <stdio.h>
+#include <stdlib.h>
+
+char *get_filename(int selection);
+
+char *read_file(const char *filename);
 
 int main(int argc, char const* argv[]) {
     const char *host = "192.168.0.184";
@@ -33,7 +40,7 @@ int main(int argc, char const* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Client socket translated\n");
+    printf("Server socket translated\n");
 
     for (rec = res; rec != NULL; rec = rec->ai_next) {
         //Create Socket File Descriptor
@@ -58,7 +65,7 @@ int main(int argc, char const* argv[]) {
 
     }
 
-    printf("Socket bound to %d:%d", *host, *port);
+    printf("Socket bound to %d:%d\n", *host, *port);
 
     freeaddrinfo(res);
 
@@ -72,20 +79,123 @@ int main(int argc, char const* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Server waiting for connections!");
+    printf("Server waiting for connections!\n");
+
+
     while(1){
         sin_size = sizeof(clientaddr);
         newfd = accept(sockfd, (struct sockaddr *)&clientaddr, &sin_size);
         if(newfd == -1){
-            perror("Could not creat client socket file descriptor");
+            perror("Could not create client socket file descriptor");
             exit(EXIT_FAILURE);
             continue;
         }
-         //inet_ntop(clientaddr.ss_family, get_in_addr((struct sockaddr *)&clientaddr), s, sizeof s);
-         if(send(newfd, "HIIII", 13, 0) == -1){
-             perror("Could not send to client");
-             exit(EXIT_FAILURE);
-         }
+        char *msg = "Welcome to my library! \n"
+                    "Please select and option:\n"
+                    "1). Alice's Adventures in Wonderland\n"
+                    "2). Moby Dick\n"
+                    "3). Romeo and Juliet\n"
+                    "4). The Great Gatsby\n"
+                    "5). Pride and Prejudice\n";
+
+
+        if(send(newfd, msg, 1024, 0) == -1){
+            perror("Could not send to client");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Sent Selection\n");
+
+        char buffer[1000];
+
+        while (recv(newfd, buffer, 1000, 0) > 0) {
+            printf("Received message from client: %s\n", buffer);
+            memset(buffer, 0, 1000);
+        }
+
+        // close the client socket
+
+        printf( "received selection: %s", buffer);
+
+        char *filename = get_filename(atoi(buffer));
+
+        char *file = read_file(filename);
+
+        printf("Filename: %s", filename);
+
+        if(send(newfd, filename, strlen(file), 0) == -1){
+            perror("Could not send to client");
+            exit(EXIT_FAILURE);
+        }
+
+
     }
     return 0;
+}
+
+
+char *read_file(const char *filename) {
+    // open the file for reading
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        printf("Could not open file\n");
+        return NULL;
+    }
+
+    // get the size of the file
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    // allocate a buffer to hold the file contents
+    char *buffer = (char *)malloc(file_size);
+    if (buffer == NULL) {
+        printf("Memory allocation error\n");
+        fclose(fp);
+        return NULL;
+    }
+
+    // read the file contents into the buffer
+    fread(buffer, file_size, 1, fp);
+
+    // close the file
+    fclose(fp);
+
+    // copy the buffer to a string variable
+    char *string = (char *)malloc(file_size + 1);
+    if (string == NULL) {
+        printf("Memory allocation error\n");
+        free(buffer);
+        return NULL;
+    }
+    memcpy(string, buffer, file_size);
+    string[file_size] = '\0';
+
+    // free the buffer
+    free(buffer);
+
+    // return the string
+    return string;
+}
+
+
+char *get_filename(int selection) {
+    char *filename;
+    switch (selection) {
+        case 1:
+            filename = "Alice's Adventures in Wonderland";
+            break;
+        case 2:
+            filename = "Moby Dick";
+            break;
+        case 3:
+            filename = "Romeo and Juliet";
+            break;
+        case 4:
+            filename = "The Great Gatsby";
+            break;
+        case 5:
+            filename = "Pride and Prejudice";
+            break;
+    }
 }
