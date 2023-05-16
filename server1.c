@@ -104,26 +104,20 @@ int main(int argc, char const* argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        printf("Sent Selection\n");
+        printf("Sent Books\n");
 
-        char buffer[1000];
-
-        while (recv(newfd, buffer, 1000, 0) > 0) {
-            printf("Received message from client: %s\n", buffer);
-            memset(buffer, 0, 1000);
-        }
-
-        // close the client socket
+        char buffer[10];
+        recv(newfd, buffer, 1000, 0);
 
         printf( "received selection: %s", buffer);
 
         char *filename = get_filename(atoi(buffer));
 
+        printf("Filename: %s\n", filename);
+
         char *file = read_file(filename);
 
-        printf("Filename: %s", filename);
-
-        if(send(newfd, filename, strlen(file), 0) == -1){
+        if(send(newfd, filename, 1024, 0) == -1){
             perror("Could not send to client");
             exit(EXIT_FAILURE);
         }
@@ -183,19 +177,20 @@ char *get_filename(int selection) {
     char *filename;
     switch (selection) {
         case 1:
-            filename = "Alice's Adventures in Wonderland";
+            filename = "Alice's Adventures in Wonderland.txt";
             break;
         case 2:
-            filename = "Moby Dick";
+            filename = "Moby Dick.txt";
             break;
         case 3:
-            filename = "Romeo and Juliet";
+            filename = "Romeo and Juliet.txt";
             break;
         case 4:
-            filename = "The Great Gatsby";
+            filename = "The Great Gatsby.txt";
             break;
         case 5:
-            filename = "Pride and Prejudice";
+            filename = "Pride and Prejudice.txt";
             break;
     }
+    return filename;
 }

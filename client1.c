@@ -53,7 +53,7 @@ int main(int argc, char const* argv[]) {
         printf(buffer);
 
 
-        printf("Enter Selection: ");
+        printf("\nEnter Selection: ");
         fgets(message, 1000, stdin);
 
         // remove newline character from user input
@@ -64,9 +64,9 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        while (recv(client_sock, buffer, 1000, 0) > 0) {
-            printf("Received message from client: %s\n", buffer);
-            memset(buffer, 0, 1000);
+        memset(buffer, 0, 1000);
+        if (recv(client_sock, buffer, 1000, 0) > 0) {
+            printf("Checking out %s", buffer);
         }
     }
 
